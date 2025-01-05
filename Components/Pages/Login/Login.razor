@@ -1,0 +1,35 @@
+﻿@page "/"
+@using Ing_ExpenseTracker.Models
+@inject UserService UserService
+@inject NavigationManager NavigationManager
+@using Ing_ExpenseTracker.Components.Layout
+@layout FirstLayout
+
+<div class="container d-flex justify-content-center align-items-center vh-100">
+    <div class="card p-4 shadow-lg" style="width: 400px; border-radius: 15px;">
+        <h3 class="text-center fw-bold">Login</h3>
+        <p class="text-center" style="font-size: 1.5rem; font-weight: bold;">
+            To <span style="color: #B200ED;">IngExpenseTracker</span>
+        </p>
+        @if (!string.IsNullOrEmpty(Message))
+        {
+            <div class="alert alert-danger">@Message</div>
+        }
+        <form>
+            <div class="form-group mb-3">
+                <label for="username" class="fw-bold">Username</label>
+                <input id="username" @bind="LoginUsername" class="form-control" placeholder="Enter your username" style="border-radius: 10px;" />
+            </div>
+            <div class="form-group mb-3">
+                <label for="password" class="fw-bold">Password</label>
+                <input id="password" @bind="LoginPassword" class="form-control" placeholder="Enter your password" type="password" style="border-radius: 10px;" />
+            </div>
+            <button type="button" @onclick="LoginPage" class="btn btn-primary w-100" style="border-radius: 10px  ;">Login</button>
+        </form>
+        <p class="text-center mt-3">
+            Don't have an account?
+            <a href="/register" class="text-decoration-none" style="color: #B200ED;">Register</a>
+        </p>
+    </div>
+</div>
+

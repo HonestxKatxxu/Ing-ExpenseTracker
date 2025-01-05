@@ -1,27 +1,50 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">Ing ExpenseTracker</a>
+        <!-- Brand -->
+        <a class="navbar-brand d-flex align-items-center" href="/dashboard">
+            <i class="fas fa-chart-line me-2"></i> Ing_ExpenseTracker
+        </a>
+
+        <!-- Navbar Toggler (for mobile view) -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Collapsible Links -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <!-- Left Side Links -->
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <NavLink href="/dashboard" class="nav-link d-flex align-items-center" activeClass="active">
+                        <i class="fas fa-home me-2"></i> Dashboard
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink href="/cashinflow" class="nav-link d-flex align-items-center" activeClass="active">
+                        <i class="fas fa-arrow-down me-2"></i> Cash Inflow
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink href="/cashoutflow" class="nav-link d-flex align-items-center" activeClass="active">
+                        <i class="fas fa-arrow-up me-2"></i> Cash Outflow
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink href="/transactions" class="nav-link d-flex align-items-center" activeClass="active">
+                        <i class="fas fa-exchange-alt me-2"></i> Transactions
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink href="/debts" class="nav-link d-flex align-items-center" activeClass="active">
+                        <i class="fas fa-credit-card me-2"></i> Debt Management
+                    </NavLink>
+                </li>
+            </ul>
+
+          
+        </div>
     </div>
-</div>
+</nav>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-    </nav>
-</div>

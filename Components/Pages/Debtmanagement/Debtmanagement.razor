@@ -1,0 +1,233 @@
+﻿@page "/debts"
+@using Ing_ExpenseTracker.Models
+@inject UserService UserService
+
+<div class="container mt-5">
+    <h1 class="text-center text-primary mb-4">Debt Management</h1>
+
+    <!-- Debt Summary -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title text-info">Total Debt</h4>
+                    <p class="display-6">@TotalDebt</p>
+                    <small class="text-muted">Across @TotalDebts debts</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title text-warning">Pending Amount</h4>
+                    <p class="display-6">@PendingDebt</p>
+                    <small class="text-muted">Due within 30 days</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title text-success">Cleared Debt</h4>
+                    <p class="display-6">@ClearedDebt</p>
+                    <small class="text-muted">Last payment: @LastPaymentDate</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debt Table -->
+    <div class="table-responsive mb-4">
+        <table class="table table-striped table-hover">
+            <thead class="table-primary">
+                <tr>
+                    <th>Source</th>
+                    <th>Amount</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var debt in Data.Debts.OrderBy(d => d.DueDate))
+                {
+                    <tr>
+                        <td>@debt.Source</td>
+                        <td>@debt.Amount</td>
+                        <td>@debt.DueDate.ToString("MM/dd/yyyy")</td>
+                        <td>
+                            <span class="badge @(debt.Status == "Pending" ? "bg-warning" : "bg-success")">
+                                @debt.Status
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" @onclick="() => EditDebt(debt.Id)">Edit</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteDebt(debt.Id)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Edit Debt Form -->
+    @if (IsEditing)
+    {
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2 class="card-title text-center text-primary">Edit Debt</h2>
+                <EditForm Model="editingDebt" OnValidSubmit="HandleEditSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="mb-3">
+                        <label for="source" class="form-label">Source</label>
+                        <InputText id="source" @bind-Value="editingDebt.Source" class="form-control" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">Debt Amount</label>
+                        <InputNumber id="amount" @bind-Value="editingDebt.Amount" class="form-control" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="dueDate" class="form-label">Due Date</label>
+                        <InputDate id="dueDate" @bind-Value="editingDebt.DueDate" class="form-control" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select id="status" @bind="editingDebt.Status" class="form-select">
+                            <option value="Pending">Pending</option>
+                            <option value="Cleared">Cleared</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">Save Changes</button>
+                </EditForm>
+            </div>
+        </div>
+    }
+
+    <!-- Add New Debt Form -->
+    <div class="card">
+        <div class="card-body">
+            <h2 class="card-title text-center text-primary">Add New Debt</h2>
+            <EditForm Model="newDebt" OnValidSubmit="HandleDebtSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label for="source" class="form-label">Source</label>
+                    <InputText id="source" @bind-Value="newDebt.Source" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="amount" class="form-label">Debt Amount</label>
+                    <InputNumber id="amount" @bind-Value="newDebt.Amount" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="dueDate" class="form-label">Due Date</label>
+                    <InputDate id="dueDate" @bind-Value="newDebt.DueDate" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select id="status" @bind="newDebt.Status" class="form-select">
+                        <option value="Pending">Pending</option>
+                        <option value="Cleared">Cleared</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Add Debt</button>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private AppData Data = new AppData();
+    private Debt newDebt = new Debt { Status = "Pending" }; // Set default status to "Pending"
+    private Debt editingDebt = new Debt();
+    private bool IsEditing = false;
+
+    private decimal TotalDebt = 0;
+    private int TotalDebts;
+    private decimal PendingDebt;
+    private decimal ClearedDebt;
+    private string LastPaymentDate = "N/A";
+
+    protected override void OnInitialized()
+    {
+        Data = UserService.LoadUsers();
+        CalculateDebtSummary();
+    }
+
+    private void CalculateDebtSummary()
+    {
+        TotalDebt = Data.Debts.Sum(d => d.Amount);
+        TotalDebts = Data.Debts.Count;
+        PendingDebt = Data.Debts.Where(d => d.Status == "Pending").Sum(d => d.Amount);
+        ClearedDebt = Data.Debts.Where(d => d.Status == "Cleared").Sum(d => d.Amount);
+        LastPaymentDate = Data.Debts.Where(d => d.Status == "Cleared")
+                                    .OrderByDescending(d => d.DueDate)
+                                    .FirstOrDefault()?.DueDate.ToString("MM/dd/yyyy") ?? "N/A";
+    }
+
+    private void HandleDebtSubmit()
+    {
+        newDebt.Id = Data.Debts.Count + 1;
+        Data.Debts.Add(newDebt);
+        UserService.SaveUsers(Data);
+
+        // Recalculate summary
+        CalculateDebtSummary();
+
+        // Reset form with default status "Pending"
+        newDebt = new Debt { Status = "Pending" };
+    }
+
+    private void DeleteDebt(int debtId)
+    {
+        var debtToRemove = Data.Debts.FirstOrDefault(d => d.Id == debtId);
+        if (debtToRemove != null)
+        {
+            Data.Debts.Remove(debtToRemove);
+            UserService.SaveUsers(Data);
+
+            // Recalculate summary
+            CalculateDebtSummary();
+        }
+    }
+
+    private void EditDebt(int debtId)
+    {
+        editingDebt = Data.Debts.FirstOrDefault(d => d.Id == debtId);
+        if (editingDebt != null)
+        {
+            IsEditing = true;
+        }
+    }
+
+    private void HandleEditSubmit()
+    {
+        var existingDebt = Data.Debts.FirstOrDefault(d => d.Id == editingDebt.Id);
+        if (existingDebt != null)
+        {
+            existingDebt.Source = editingDebt.Source;
+            existingDebt.Amount = editingDebt.Amount;
+            existingDebt.DueDate = editingDebt.DueDate;
+            existingDebt.Status = editingDebt.Status;
+
+            UserService.SaveUsers(Data);
+
+            // Recalculate summary
+            CalculateDebtSummary();
+
+            // Reset editing state
+            editingDebt = new Debt();
+            IsEditing = false;
+        }
+    }
+}

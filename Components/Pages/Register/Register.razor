@@ -1,0 +1,68 @@
+﻿@page "/register"
+@using Ing_ExpenseTracker.Models
+@inject UserService UserService
+@inject NavigationManager NavigationManager
+@using Ing_ExpenseTracker.Components.Layout
+@layout FirstLayout
+
+<div class="container d-flex justify-content-center align-items-center vh-100">
+    <div class="card p-4 shadow-lg" style="width: 500px; border-radius: 15px;">
+        <h3 class="text-center fw-bold">Register</h3>
+        <p class="text-center" style="font-size: 1.5rem; font-weight: bold;">
+            TO <span style="color: #B200ED;">IngExpenseTracker</span> Account
+        </p>
+
+        @if (!string.IsNullOrEmpty(Message))
+        {
+            <div class="alert alert-danger">@Message</div>
+        }
+
+        <form>
+            <!-- Full Name -->
+            <div class="form-group mb-3">
+                <label for="fullName" class="fw-bold">Full Name</label>
+                <input id="fullName" @bind="RegisterUsername" placeholder="Enter your full name" class="form-control" style="border-radius: 10px;" />
+            </div>
+
+            <!-- Email -->
+            <div class="form-group mb-3">
+                <label for="email" class="fw-bold">Email</label>
+                <input id="email" @bind="RegisterEmail" placeholder="Enter your email" type="email" class="form-control" style="border-radius: 10px;" />
+            </div>
+
+            <!-- Password -->
+            <div class="form-group mb-3">
+                <label for="password" class="fw-bold">Password</label>
+                <input id="password" @bind="RegisterPassword" placeholder="Enter your password" type="password" class="form-control" style="border-radius: 10px;" />
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="form-group mb-3">
+                <label for="confirmPassword" class="fw-bold">Confirm Password</label>
+                <input id="confirmPassword" @bind="ConfirmPassword" placeholder="Confirm your password" type="password" class="form-control" style="border-radius: 10px;" />
+            </div>
+
+            <!-- Preferred Currency -->
+            <div class="form-group mb-3">
+                <label for="preferredCurrency" class="fw-bold">Preferred Currency</label>
+                <select id="preferredCurrency" @bind="PreferredCurrency" class="form-select" style="border-radius: 10px;">
+                    <option value="" disabled>Select Currency</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="NPR">NPR</option>
+                </select>
+            </div>
+
+            <!-- Register Button -->
+            <button type="button" class="btn btn-primary w-100" @onclick="RegisterPage" style="border-radius: 10px;">Register</button>
+        </form>
+
+        <!-- Login Link -->
+        <p class="text-center mt-3">
+            Already have an account? 
+            <a class="text-decoration-none" @onclick="NavigateToLogin" style="color: #B200ED; cursor: pointer;">Login</a>
+        </p>
+    </div>
+</div>
+

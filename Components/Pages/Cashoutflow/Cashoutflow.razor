@@ -1,0 +1,183 @@
+﻿@page "/cashoutflow"
+@using Ing_ExpenseTracker.Models
+@inject UserService UserService
+@inject NavigationManager NavigationManager
+
+<div class="container mt-5">
+    <h1 class="text-primary mb-4">Cash Outflows</h1>
+
+    <!-- Current Date -->
+    <div class="row mb-4">
+        <div class="col-md-12 text-center">
+            <h5 class="text-muted">Today's Date: <span class="text-info">@CurrentDate.ToString("MMMM dd, yyyy")</span></h5>
+        </div>
+    </div>
+
+    <!-- Outflow Summary -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title text-success">Total Outflows</h4>
+                    <p class="display-6">@TotalOutflows</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title text-info">Highest Outflow</h4>
+                    <p class="display-6">@HighestOutflow</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title text-warning">Lowest Outflow</h4>
+                    <p class="display-6">@LowestOutflow</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Outflow Form -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="card-title text-primary">Add New Cash Outflow</h2>
+            <EditForm Model="newOutflow" OnValidSubmit="HandleCashOutflowSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label for="amount" class="form-label">Amount</label>
+                    <InputNumber id="amount" @bind-Value="newOutflow.Debit" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="date" class="form-label">Date</label>
+                    <InputDate id="date" @bind-Value="newOutflow.Date" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="category" class="form-label">Category</label>
+                    <InputText id="category" @bind-Value="newOutflow.Category" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="notes" class="form-label">Notes</label>
+                    <InputTextArea id="notes" @bind-Value="newOutflow.Description" class="form-control" />
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Add Outflow</button>
+            </EditForm>
+        </div>
+    </div>
+
+    <!-- Recent Outflows -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h2 class="card-title text-info">Recent Outflows</h2>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Category</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (CashOutflows.Any())
+                        {
+                            @foreach (var outflow in CashOutflows.OrderByDescending(o => o.Date))
+                            {
+                                <tr>
+                                    <td>@outflow.Date.ToString("MM/dd/yyyy")</td>
+                                    <td>@outflow.Debit</td>
+                                    <td>@outflow.Category</td>
+                                    <td>@outflow.Description</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center">No cash outflows recorded.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Transaction> CashOutflows = new();
+    private decimal TotalOutflows = 0;
+    private decimal HighestOutflow = 0;
+    private decimal LowestOutflow = 0;
+    private Transaction newOutflow = new Transaction();
+    private decimal MainBalance = 0; // To check sufficient balance
+    private DateTime CurrentDate = DateTime.Now; // Store today's date
+
+    protected override void OnInitialized()
+    {
+        // Load user data
+        var data = UserService.LoadUsers(); // Load data from the JSON database
+        CashOutflows = data.Transactions.Where(t => t.Debit > 0).ToList();
+
+        // Calculate totals, highest, and lowest outflows
+        if (CashOutflows.Any())
+        {
+            TotalOutflows = CashOutflows.Sum(t => t.Debit);
+            HighestOutflow = CashOutflows.Max(t => t.Debit);
+            LowestOutflow = CashOutflows.Min(t => t.Debit);
+        }
+
+        // Calculate Main Balance
+        MainBalance = data.Transactions.Sum(t => t.Credit) - data.Transactions.Sum(t => t.Debit);
+    }
+
+    private void HandleCashOutflowSubmit()
+    {
+        if (newOutflow.Debit <= 0)
+        {
+            Console.WriteLine("Outflow amount must be greater than zero.");
+            return;
+        }
+
+        if (newOutflow.Debit > MainBalance)
+        {
+            Console.WriteLine("Insufficient balance for this outflow.");
+            return;
+        }
+
+        // Assign new outflow properties
+        newOutflow.Id = CashOutflows.Count + 1;
+        if (newOutflow.Date == default)
+        {
+            newOutflow.Date = DateTime.Now; // Default to current date
+        }
+        newOutflow.Credit = 0; // Ensure it's a cash outflow
+
+        // Add new outflow
+        var data = UserService.LoadUsers();
+        data.Transactions.Add(newOutflow);
+
+        // Save updated data
+        UserService.SaveUsers(data);
+
+        // Recalculate totals and balance
+        CashOutflows.Add(newOutflow);
+        TotalOutflows = CashOutflows.Sum(t => t.Debit);
+        HighestOutflow = CashOutflows.Max(t => t.Debit);
+        LowestOutflow = CashOutflows.Min(t => t.Debit);
+        MainBalance -= newOutflow.Debit;
+
+        // Reset form
+        newOutflow = new Transaction();
+    }
+}

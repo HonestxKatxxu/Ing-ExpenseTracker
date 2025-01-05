@@ -1,0 +1,145 @@
+﻿@page "/dashboard"
+@using Ing_ExpenseTracker.Models
+@inject UserService UserService
+@inject NavigationManager NavigationManager
+
+<div class="container mt-5">
+    <!-- Header Section -->
+    <header class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="text-primary">Welcome @UserName</h3>
+        <div class="d-flex align-items-center gap-2">
+            <div class="d-flex flex-column me-3">
+                <label for="startDate" class="form-label">Start Date</label>
+                <input id="startDate" type="date" @bind="StartDate" class="form-control" />
+            </div>
+            <div class="d-flex flex-column me-3">
+                <label for="endDate" class="form-label">End Date</label>
+                <input id="endDate" type="date" @bind="EndDate" class="form-control" />
+            </div>
+            <button class="btn btn-primary" @onclick="ApplyDateFilter">Filter</button>
+        </div>
+        <button class="btn btn-danger" @onclick="Logout">Logout</button>
+    </header>
+
+    <!-- Statistics Section -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title text-success">Total Inflows</h4>
+                    <p class="display-6">@TotalInflows</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title text-danger">Total Outflows</h4>
+                    <p class="display-6">@TotalOutflows</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title text-info">Net Balance</h4>
+                    <p class="display-6">@NetBalance</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title text-warning">Remaining Debt</h4>
+                    <p class="display-6">@RemainingDebt</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Section -->
+    <div class="row mb-4">
+        <!-- Pending Debts -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">Pending Debts</h5>
+                    <ul class="list-group">
+                        @if (PendingDebts.Any())
+                        {
+                            @foreach (var debt in PendingDebts)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span><strong>@debt.Source:</strong> @debt.RemainingAmount</span>
+                                    <span class="badge bg-danger">@debt.DueDate.ToShortDateString()</span>
+                                </li>
+                            }
+                        }
+                        else
+                        {
+                            <li class="list-group-item text-center">No pending debts available.</li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction Overview -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">Transaction Overview</h5>
+                    <ul class="list-group">
+                        <li class="list-group-item">Total Transactions: @TotalTransactions</li>
+                        <li class="list-group-item">Highest Transaction: @HighestTransaction</li>
+                        <li class="list-group-item">Lowest Transaction: @LowestTransaction</li>
+                        <li class="list-group-item">Average Transaction: @AverageTransaction</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Transactions Section -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title text-info">Recent Transactions</h5>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>Transaction ID</th>
+                            <th>Main Balance</th>
+                            <th>Debit</th>
+                            <th>Credit</th>
+                            <th>Date</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (data?.Transactions != null && data.Transactions.Count > 0)
+                        {
+                            @foreach (var transaction in data.Transactions.OrderByDescending(t => t.Date).Take(4))
+                            {
+                                <tr>
+                                    <td>@transaction.Id</td>
+                                    <td>@((data.Transactions.Sum(t => t.Credit) - data.Transactions.Sum(t => t.Debit)))</td>
+                                    <td>@transaction.Debit</td>
+                                    <td>@transaction.Credit</td>
+                                    <td>@transaction.Date.ToString("MM/dd/yyyy")</td>
+                                    <td>@transaction.Description</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center">No transactions available.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

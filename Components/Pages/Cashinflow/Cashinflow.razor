@@ -1,0 +1,158 @@
+﻿@page "/cashinflow"
+@using Ing_ExpenseTracker.Models
+@inject UserService UserService
+
+<div class="container mt-5">
+    <h1 class="text-primary mb-4">Cash Inflows</h1>
+
+    <!-- Inflow Summary -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title text-success">Total Inflows</h4>
+                    <p class="display-6">@TotalInflows</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title text-info">Highest Inflow</h4>
+                    <p class="display-6">@HighestInflow</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title text-warning">Lowest Inflow</h4>
+                    <p class="display-6">@LowestInflow</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Cash Inflow -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="card-title text-primary">Add New Cash Inflow</h2>
+            <EditForm Model="newTransaction" OnValidSubmit="HandleCashInflowSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label for="credit" class="form-label">Credit Amount</label>
+                    <InputNumber id="credit" @bind-Value="newTransaction.Credit" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description</label>
+                    <InputText id="description" @bind-Value="newTransaction.Description" class="form-control" />
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Add Cash Inflow</button>
+            </EditForm>
+        </div>
+    </div>
+
+    <!-- Cash Inflows Table -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h2 class="card-title text-info">Recorded Cash Inflows</h2>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>Transaction ID</th>
+                            <th>Credit</th>
+                            <th>Date</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (CashInflows.Any())
+                        {
+                            @foreach (var transaction in CashInflows.OrderByDescending(t => t.Date))
+                            {
+                                <tr>
+                                    <td>@transaction.Id</td>
+                                    <td>@transaction.Credit</td>
+                                    <td>@transaction.Date.ToString("MM/dd/yyyy")</td>
+                                    <td>@transaction.Description</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center">No cash inflows recorded.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Transaction> CashInflows = new();
+    private decimal TotalInflows = 0;
+    private decimal HighestInflow = 0;
+    private decimal LowestInflow = 0;
+    private Transaction newTransaction = new Transaction();
+
+    protected override void OnInitialized()
+    {
+        var data = UserService.LoadUsers(); // Load data from the JSON database
+        CashInflows = data.Transactions.Where(t => t.Credit > 0).ToList();
+
+        if (CashInflows.Any())
+        {
+            TotalInflows = CashInflows.Sum(t => t.Credit);
+            HighestInflow = CashInflows.Max(t => t.Credit);
+            LowestInflow = CashInflows.Min(t => t.Credit);
+        }
+    }
+
+    private void HandleCashInflowSubmit()
+    {
+        var data = UserService.LoadUsers(); // Reload data
+
+        if (data.Transactions == null)
+        {
+            data.Transactions = new List<Transaction>(); // Ensure Transactions list is initialized
+        }
+
+        // Validate Credit amount
+        if (newTransaction.Credit <= 0)
+        {
+            // Handle invalid credit amounts (e.g., display an error)
+            return;
+        }
+
+        // Assign new transaction properties
+        newTransaction.Id = data.Transactions.Count + 1;
+        newTransaction.Date = DateTime.Now;
+        newTransaction.Debit = 0; // Ensure it's a cash inflow, so no debit
+
+        // Add new transaction to the list
+        data.Transactions.Add(newTransaction);
+
+        // Save updated data
+        UserService.SaveUsers(data);
+
+        // Recalculate totals and inflows
+        CashInflows = data.Transactions.Where(t => t.Credit > 0).ToList();
+        if (CashInflows.Any())
+        {
+            TotalInflows = CashInflows.Sum(t => t.Credit);
+            HighestInflow = CashInflows.Max(t => t.Credit);
+            LowestInflow = CashInflows.Min(t => t.Credit);
+        }
+
+        // Reset form
+        newTransaction = new Transaction();
+    }
+}

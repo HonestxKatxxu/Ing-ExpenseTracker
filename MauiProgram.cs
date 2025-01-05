@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿
+using Microsoft.Extensions.Logging;
 
 namespace Ing_ExpenseTracker
 {
@@ -14,14 +15,17 @@ namespace Ing_ExpenseTracker
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 });
 
+            builder.Services.AddSingleton<UserService>();
             builder.Services.AddMauiBlazorWebView();
 
 #if DEBUG
-    		builder.Services.AddBlazorWebViewDeveloperTools();
-    		builder.Logging.AddDebug();
+            builder.Services.AddBlazorWebViewDeveloperTools();
+            builder.Logging.AddDebug();
 #endif
 
             return builder.Build();
         }
     }
+
+
 }
