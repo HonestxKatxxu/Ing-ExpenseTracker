@@ -6,70 +6,134 @@
 <div class="container mt-5">
     <!-- Header Section -->
     <header class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="text-primary">Welcome @UserName</h3>
+        <h3 class="text-primary"><i class="bi bi-person-circle"></i> Welcome, <strong>@UserName</strong></h3>
         <div class="d-flex align-items-center gap-2">
             <div class="d-flex flex-column me-3">
-                <label for="startDate" class="form-label">Start Date</label>
-                <input id="startDate" type="date" @bind="StartDate" class="form-control" />
+                <label for="startDate" class="form-label fw-bold">Start Date</label>
+                <input id="startDate" type="date" @bind="StartDate" class="form-control shadow-sm" />
             </div>
             <div class="d-flex flex-column me-3">
-                <label for="endDate" class="form-label">End Date</label>
-                <input id="endDate" type="date" @bind="EndDate" class="form-control" />
+                <label for="endDate" class="form-label fw-bold">End Date</label>
+                <input id="endDate" type="date" @bind="EndDate" class="form-control shadow-sm" />
             </div>
-            <button class="btn btn-primary" @onclick="ApplyDateFilter">Filter</button>
+            <button class="btn btn-primary btn-lg shadow-sm" @onclick="FilterDateRange">
+                <i class="bi bi-funnel"></i> Filter
+            </button>
         </div>
-        <button class="btn btn-danger" @onclick="Logout">Logout</button>
+
+        <p class="text-info fs-5">Preferred Currency: <strong>@SelectedCurrency</strong></p>
+
+        <button class="btn btn-danger btn-lg shadow-sm" @onclick="Logout">
+            <i class="bi bi-box-arrow-right"></i> Logout
+        </button>
+
+
     </header>
 
-    <!-- Statistics Section -->
-    <div class="row mb-4">
+
+
+     <!-- Statistics Section -->
+    <div class="row g-4">
         <div class="col-md-3">
-            <div class="card text-center shadow-sm">
-                <div class="card-body">
-                    <h4 class="card-title text-success">Total Inflows</h4>
-                    <p class="display-6">@TotalInflows</p>
+            <div class="card text-center shadow border-0">
+                <div class="card-body bg-light rounded">
+                    <h4 class="card-title text-success fw-bold">
+                        <i class="bi bi-arrow-down-circle"></i> Total Inflows
+                    </h4>
+                    <p class="display-6 fw-bold text-dark">@FormatWithCurrency(TotalInflows)</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card text-center shadow-sm">
-                <div class="card-body">
-                    <h4 class="card-title text-danger">Total Outflows</h4>
-                    <p class="display-6">@TotalOutflows</p>
+            <div class="card text-center shadow border-0">
+                <div class="card-body bg-light rounded">
+                    <h4 class="card-title text-danger fw-bold">
+                        <i class="bi bi-arrow-up-circle"></i> Total Outflows
+                    </h4>
+                    <p class="display-6 fw-bold text-dark">@FormatWithCurrency(TotalOutflows)</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card text-center shadow-sm">
-                <div class="card-body">
-                    <h4 class="card-title text-info">Net Balance</h4>
-                    <p class="display-6">@NetBalance</p>
+            <div class="card text-center shadow border-0">
+                <div class="card-body bg-light rounded">
+                    <h4 class="card-title text-info fw-bold">
+                        <i class="bi bi-wallet2"></i> Net Balance
+                    </h4>
+                    <p class="display-6 fw-bold text-dark">@FormatWithCurrency(NetBalance)</p>
                 </div>
             </div>
         </div>
+
         <div class="col-md-3">
-            <div class="card text-center shadow-sm">
-                <div class="card-body">
-                    <h4 class="card-title text-warning">Remaining Debt</h4>
-                    <p class="display-6">@RemainingDebt</p>
+            <div class="card text-center shadow border-0">
+                <div class="card-body bg-light rounded">
+                    <h4 class="card-title text-info fw-bold">
+                        <i class="bi bi-exclamation-circle"></i> Remaining Debt
+                    </h4>
+                    <p class="display-6 fw-bold" style="color: @(RemainingDebt > 0 ? "red" : "green");">
+                        @FormatWithCurrency(RemainingDebt)
+                    </p>
                 </div>
+            </div>
+        </div>
+
+
+    </div>
+
+    <!-- Top 5 Highest Transactions Section -->
+    <div class="card shadow border-0 mt-4">
+        <div class="card-body">
+            <h5 class="card-title text-info"><i class="bi bi-trophy"></i> Top 5 Highest Transactions</h5>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Top5Transactions.Any())
+                        {
+                            @foreach (var transaction in Top5Transactions)
+                            {
+                                <tr>
+                                    <td>@transaction.Date.ToString("MM/dd/yyyy")</td>
+                                    <td>@transaction.Description</td>
+                                    <td>@(transaction.Credit > 0 ? "Inflow" : "Outflow")</td>
+                                    <td>@FormatWithCurrency(transaction.Credit > 0 ? transaction.Credit : transaction.Debit)</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center">No transactions available.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
+
     <!-- Details Section -->
-    <div class="row mb-4">
+    <div class="row g-4 mt-4">
         <!-- Pending Debts -->
         <div class="col-md-6">
-            <div class="card shadow-sm">
+            <div class="card shadow border-0">
                 <div class="card-body">
-                    <h5 class="card-title text-warning">Pending Debts</h5>
-                    <ul class="list-group">
+                    <h5 class="card-title text-warning"><i class="bi bi-exclamation-circle"></i> Pending Debts</h5>
+                    <ul class="list-group shadow-sm">
                         @if (PendingDebts.Any())
                         {
                             @foreach (var debt in PendingDebts)
                             {
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <li class="list-group-item d-flex justify-content-between align-items-center shadow-sm">
                                     <span><strong>@debt.Source:</strong> @debt.RemainingAmount</span>
                                     <span class="badge bg-danger">@debt.DueDate.ToShortDateString()</span>
                                 </li>
@@ -86,14 +150,16 @@
 
         <!-- Transaction Overview -->
         <div class="col-md-6">
-            <div class="card shadow-sm">
+            <div class="card shadow border-0">
                 <div class="card-body">
-                    <h5 class="card-title text-primary">Transaction Overview</h5>
-                    <ul class="list-group">
-                        <li class="list-group-item">Total Transactions: @TotalTransactions</li>
-                        <li class="list-group-item">Highest Transaction: @HighestTransaction</li>
-                        <li class="list-group-item">Lowest Transaction: @LowestTransaction</li>
-                        <li class="list-group-item">Average Transaction: @AverageTransaction</li>
+                    <h5 class="card-title text-primary"><i class="bi bi-bar-chart-line"></i> Transaction Overview</h5>
+                    <ul class="list-group shadow-sm">
+                        <li class="list-group-item">Total Transactions: <strong>@TotalTransactions</strong></li>
+                        <li class="list-group-item">Highest Inflow: <strong>@HighestInflow</strong></li>
+                        <li class="list-group-item">Lowest Inflow: <strong>@LowestInflow</strong></li>
+                        <li class="list-group-item">Highest Outflow: <strong>@HighestOutflow</strong></li>
+                        <li class="list-group-item">Lowest Outflow: <strong>@LowestOutflow</strong></li>
+                        <li class="list-group-item">Average Transaction: <strong>@AverageTransaction</strong></li>
                     </ul>
                 </div>
             </div>
@@ -101,9 +167,9 @@
     </div>
 
     <!-- Recent Transactions Section -->
-    <div class="card shadow-sm mb-4">
+    <div class="card shadow border-0 mt-4">
         <div class="card-body">
-            <h5 class="card-title text-info">Recent Transactions</h5>
+            <h5 class="card-title text-info"><i class="bi bi-clock-history"></i> Recent Transactions</h5>
             <div class="table-responsive">
                 <table class="table table-striped table-hover">
                     <thead class="table-primary">
@@ -114,27 +180,33 @@
                             <th>Credit</th>
                             <th>Date</th>
                             <th>Description</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @if (data?.Transactions != null && data.Transactions.Count > 0)
+                        @if (FilteredTransactions.Any())
                         {
-                            @foreach (var transaction in data.Transactions.OrderByDescending(t => t.Date).Take(4))
+                            @foreach (var transaction in FilteredTransactions.OrderByDescending(t => t.Date).Take(5))
                             {
                                 <tr>
                                     <td>@transaction.Id</td>
-                                    <td>@((data.Transactions.Sum(t => t.Credit) - data.Transactions.Sum(t => t.Debit)))</td>
+                                    <td>@NetBalance</td>
                                     <td>@transaction.Debit</td>
                                     <td>@transaction.Credit</td>
                                     <td>@transaction.Date.ToString("MM/dd/yyyy")</td>
                                     <td>@transaction.Description</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary" @onclick="() => DownloadReceipt(transaction)">
+                                            <i class="bi bi-file-earmark-arrow-down"></i> Download
+                                        </button>
+                                    </td>
                                 </tr>
                             }
                         }
                         else
                         {
                             <tr>
-                                <td colspan="6" class="text-center">No transactions available.</td>
+                                <td colspan="7" class="text-center">No transactions available.</td>
                             </tr>
                         }
                     </tbody>

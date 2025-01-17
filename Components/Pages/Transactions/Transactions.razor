@@ -1,6 +1,7 @@
 ﻿@page "/transactions"
 @using Ing_ExpenseTracker.Models
 @inject UserService UserService
+@inject NavigationManager NavigationManager
 
 <div class="container mt-5">
     <h1 class="text-primary mb-4">Transactions</h1>
@@ -46,7 +47,7 @@
             <div class="card text-center shadow-sm">
                 <div class="card-body">
                     <h4 class="card-title text-success">Total Transactions</h4>
-                    <p class="display-6">@TotalTransactions</p>
+                    <p class="display-6 fw-bold">@TotalTransactions</p>
                 </div>
             </div>
         </div>
@@ -54,7 +55,7 @@
             <div class="card text-center shadow-sm">
                 <div class="card-body">
                     <h4 class="card-title text-info">Net Total</h4>
-                    <p class="display-6">@NetTotal</p>
+                    <p class="display-6 fw-bold">@FormatWithCurrency(NetTotal)</p>
                 </div>
             </div>
         </div>
@@ -62,10 +63,9 @@
             <div class="card text-center shadow-sm">
                 <div class="card-body">
                     <h4 class="card-title text-warning">Highest Transactions</h4>
-                    <ul class="list-unstyled">
-                        <li><strong>Inflow:</strong> @HighestInflow</li>
-                        <li><strong>Outflow:</strong> @HighestOutflow</li>
-                        <li><strong>Debt:</strong> @HighestDebt</li>
+                    <ul class="list-unstyled fw-bold">
+                        <li><strong>Inflow:</strong> @FormatWithCurrency(HighestInflow)</li>
+                        <li><strong>Outflow:</strong> @FormatWithCurrency(HighestOutflow)</li>
                     </ul>
                 </div>
             </div>
@@ -86,10 +86,11 @@
                             <th>Amount</th>
                             <th>Tags</th>
                             <th>Notes</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @if (FilteredTransactions != null && FilteredTransactions.Any())
+                        @if (FilteredTransactions.Any())
                         {
                             @foreach (var transaction in FilteredTransactions)
                             {
@@ -97,21 +98,35 @@
                                     <td>@transaction.Date.ToString("MM/dd/yyyy")</td>
                                     <td>@transaction.Description</td>
                                     <td>@transaction.Type</td>
-                                    <td>@(transaction.Debit > 0 ? $"-{transaction.Debit}" : transaction.Credit)</td>
+                                    <td>
+                                        @FormatWithCurrency(transaction.Debit > 0 ? transaction.Debit : transaction.Credit)
+                                    </td>
                                     <td>@transaction.Tags</td>
                                     <td>@transaction.Notes</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary" @onclick="() => DownloadReceipt(transaction)">
+                                            Download Receipt
+                                        </button>
+                                    </td>
                                 </tr>
                             }
                         }
                         else
                         {
                             <tr>
-                                <td colspan="6" class="text-center">No transactions available.</td>
+                                <td colspan="7" class="text-center">No transactions available.</td>
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
+            <!-- Popup Notification -->
+            @if (IsNotificationVisible)
+            {
+                <div class="alert alert-success text-center mt-3" role="alert">
+                    Receipt downloaded successfully!
+                </div>
+            }
         </div>
     </div>
 </div>
@@ -126,8 +141,9 @@
     private string SortBy = "DateDesc";
 
     private int TotalTransactions = 0;
-    private decimal NetTotal = 0;
+    private string SelectedCurrency = "USD"; // Default currency
 
+    private decimal NetTotal => UserService.NetBalance; // Use global Net Balance
     private decimal HighestInflow = 0;
     private decimal LowestInflow = 0;
     private decimal HighestOutflow = 0;
@@ -135,27 +151,49 @@
     private decimal HighestDebt = 0;
     private decimal LowestDebt = 0;
 
+    private bool IsNotificationVisible = false;
+
     protected override void OnInitialized()
     {
-        try
+        var currentUser = UserService.GetCurrentUser();
+        if (currentUser == null)
         {
-            var data = UserService.LoadUsers();
-            AllTransactions = data?.Transactions ?? new List<Transaction>();
+            NavigationManager.NavigateTo("/"); // Redirect to login if no user is logged in
+            return;
+        }
 
-            CalculateSummary();
-            FilteredTransactions = AllTransactions.ToList();
-        }
-        catch (Exception ex)
+        SelectedCurrency = currentUser.PreferredCurrency ?? "USD"; // Fetch user's preferred currency
+        RefreshTransactions();
+    }
+
+    private void RefreshTransactions()
+    {
+        var data = UserService.LoadUsers();
+        var currentUser = UserService.GetCurrentUser();
+
+        // Load all transactions for the current user
+        AllTransactions = data.Transactions
+            .Where(t => t.UserId == currentUser.Id)
+            .ToList();
+
+        AllTransactions.ForEach(t =>
         {
-            Console.WriteLine($"Error initializing transactions: {ex.Message}");
-        }
+            t.Tags = t.Tags ?? "N/A";
+            t.Notes = t.Notes ?? "No Notes Available";
+        });
+
+        CalculateSummary();
+        FilteredTransactions = AllTransactions.ToList();
+    }
+
+    private string FormatWithCurrency(decimal amount)
+    {
+        return UserService.FormatWithCurrency(amount, SelectedCurrency);
     }
 
     private void CalculateSummary()
     {
         TotalTransactions = AllTransactions.Count;
-
-        NetTotal = AllTransactions.Sum(t => t.Credit - t.Debit);
 
         HighestInflow = AllTransactions.Where(t => t.Credit > 0).DefaultIfEmpty(new Transaction()).Max(t => t.Credit);
         LowestInflow = AllTransactions.Where(t => t.Credit > 0).DefaultIfEmpty(new Transaction { Credit = decimal.MaxValue }).Min(t => t.Credit);
@@ -198,5 +236,18 @@
             "DateDesc" => FilteredTransactions.OrderByDescending(t => t.Date).ToList(),
             _ => FilteredTransactions
         };
+    }
+
+    private async Task DownloadReceipt(Transaction transaction)
+    {
+        transaction.Type = transaction.Credit > 0 ? "Inflow" : transaction.Debit > 0 ? "Outflow" : "Debt";
+
+        UserService.GenerateReceipt(transaction);
+
+        IsNotificationVisible = true;
+        await Task.Delay(3000);
+        IsNotificationVisible = false;
+
+        StateHasChanged();
     }
 }

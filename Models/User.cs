@@ -28,5 +28,8 @@ namespace Ing_ExpenseTracker.Models
         public string Address { get; set; } // Address (optional)
 
         public DateTime CreatedOn { get; set; } = DateTime.Now; // Date the user was added
+        public decimal NetBalance { get; set; } = 0;
+
+        public string PreferredCurrency { get; set; }
     }
 }

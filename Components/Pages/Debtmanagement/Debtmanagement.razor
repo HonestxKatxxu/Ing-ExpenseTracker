@@ -1,36 +1,59 @@
 ﻿@page "/debts"
 @using Ing_ExpenseTracker.Models
 @inject UserService UserService
+@inject NavigationManager NavigationManager
 
 <div class="container mt-5">
-    <h1 class="text-center text-primary mb-4">Debt Management</h1>
+    <h1 class="text-center text-primary mb-4"><i class="bi bi-wallet2"></i> Debt Management</h1>
+
+    <!-- Notification Section -->
+    @if (IsNotificationVisible)
+    {
+        <div class="alert alert-success text-center shadow-sm" role="alert">
+            <i class="bi bi-check-circle"></i> @NotificationMessage
+        </div>
+    }
+    @if (IsErrorMessageVisible)
+    {
+        <div class="alert alert-danger text-center shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle"></i> @ErrorMessage
+        </div>
+    }
 
     <!-- Debt Summary -->
     <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card text-center shadow-sm">
-                <div class="card-body">
-                    <h4 class="card-title text-info">Total Debt</h4>
-                    <p class="display-6">@TotalDebt</p>
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h4 class="text-info"><i class="bi bi-cash-coin"></i> Total Debt</h4>
+                    <p class="display-6 fw-bold">@FormatWithCurrency(TotalDebt)</p>
                     <small class="text-muted">Across @TotalDebts debts</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card text-center shadow-sm">
-                <div class="card-body">
-                    <h4 class="card-title text-warning">Pending Amount</h4>
-                    <p class="display-6">@PendingDebt</p>
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h4 class="text-warning"><i class="bi bi-exclamation-circle"></i> Pending Amount</h4>
+                    <p class="display-6 fw-bold">@FormatWithCurrency(PendingDebt)</p>
                     <small class="text-muted">Due within 30 days</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card text-center shadow-sm">
-                <div class="card-body">
-                    <h4 class="card-title text-success">Cleared Debt</h4>
-                    <p class="display-6">@ClearedDebt</p>
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h4 class="text-success"><i class="bi bi-check-circle"></i> Cleared Debt</h4>
+                    <p class="display-6 fw-bold">@FormatWithCurrency(ClearedDebt)</p>
                     <small class="text-muted">Last payment: @LastPaymentDate</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h4 class="text-primary"><i class="bi bi-wallet2"></i> Net Balance</h4>
+                    <p class="display-6 fw-bold">@FormatWithCurrency(NetBalance)</p>
                 </div>
             </div>
         </div>
@@ -38,7 +61,7 @@
 
     <!-- Debt Table -->
     <div class="table-responsive mb-4">
-        <table class="table table-striped table-hover">
+        <table class="table table-striped table-hover shadow-sm">
             <thead class="table-primary">
                 <tr>
                     <th>Source</th>
@@ -49,20 +72,38 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var debt in Data.Debts.OrderBy(d => d.DueDate))
+                @if (UserDebts.Any())
+                {
+                    @foreach (var debt in UserDebts.OrderBy(d => d.DueDate))
+                    {
+                        <tr>
+                            <td>@debt.Source</td>
+                            <td>@FormatWithCurrency(debt.Amount)</td>
+                            <td>@debt.DueDate.ToString("MM/dd/yyyy")</td>
+                            <td>
+                                <span class="badge @(debt.Status == "Pending" ? "bg-warning" : "bg-success")">
+                                    @debt.Status
+                                </span>
+                            </td>
+                            <td>
+                                @if (debt.Status == "Pending")
+                                {
+                                    <button class="btn btn-sm btn-primary" @onclick="() => OpenPayForm(debt.Id)">
+                                        <i class="bi bi-cash"></i> Pay
+                                    </button>
+                                }
+                                <button class="btn btn-sm btn-danger" @onclick="() => AttemptDeleteDebt(debt.Id)">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
                 {
                     <tr>
-                        <td>@debt.Source</td>
-                        <td>@debt.Amount</td>
-                        <td>@debt.DueDate.ToString("MM/dd/yyyy")</td>
-                        <td>
-                            <span class="badge @(debt.Status == "Pending" ? "bg-warning" : "bg-success")">
-                                @debt.Status
-                            </span>
-                        </td>
-                        <td>
-                            <button class="btn btn-sm btn-warning" @onclick="() => EditDebt(debt.Id)">Edit</button>
-                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteDebt(debt.Id)">Delete</button>
+                        <td colspan="5" class="text-center text-muted">
+                            <i class="bi bi-info-circle"></i> No debts available.
                         </td>
                     </tr>
                 }
@@ -70,61 +111,22 @@
         </table>
     </div>
 
-    <!-- Edit Debt Form -->
-    @if (IsEditing)
-    {
-        <div class="card mb-4">
-            <div class="card-body">
-                <h2 class="card-title text-center text-primary">Edit Debt</h2>
-                <EditForm Model="editingDebt" OnValidSubmit="HandleEditSubmit">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
-
-                    <div class="mb-3">
-                        <label for="source" class="form-label">Source</label>
-                        <InputText id="source" @bind-Value="editingDebt.Source" class="form-control" />
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="amount" class="form-label">Debt Amount</label>
-                        <InputNumber id="amount" @bind-Value="editingDebt.Amount" class="form-control" />
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="dueDate" class="form-label">Due Date</label>
-                        <InputDate id="dueDate" @bind-Value="editingDebt.DueDate" class="form-control" />
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="status" class="form-label">Status</label>
-                        <select id="status" @bind="editingDebt.Status" class="form-select">
-                            <option value="Pending">Pending</option>
-                            <option value="Cleared">Cleared</option>
-                        </select>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-100">Save Changes</button>
-                </EditForm>
-            </div>
-        </div>
-    }
-
     <!-- Add New Debt Form -->
-    <div class="card">
+    <div class="card shadow-sm">
         <div class="card-body">
-            <h2 class="card-title text-center text-primary">Add New Debt</h2>
+            <h2 class="card-title text-center text-primary"><i class="bi bi-plus-circle"></i> Add New Debt</h2>
             <EditForm Model="newDebt" OnValidSubmit="HandleDebtSubmit">
                 <DataAnnotationsValidator />
                 <ValidationSummary />
 
                 <div class="mb-3">
                     <label for="source" class="form-label">Source</label>
-                    <InputText id="source" @bind-Value="newDebt.Source" class="form-control" />
+                    <InputText id="source" @bind-Value="newDebt.Source" class="form-control" placeholder="e.g., Bank Loan" />
                 </div>
 
                 <div class="mb-3">
                     <label for="amount" class="form-label">Debt Amount</label>
-                    <InputNumber id="amount" @bind-Value="newDebt.Amount" class="form-control" />
+                    <InputNumber id="amount" @bind-Value="newDebt.Amount" class="form-control" placeholder="e.g., 5000" />
                 </div>
 
                 <div class="mb-3">
@@ -132,102 +134,220 @@
                     <InputDate id="dueDate" @bind-Value="newDebt.DueDate" class="form-control" />
                 </div>
 
-                <div class="mb-3">
-                    <label for="status" class="form-label">Status</label>
-                    <select id="status" @bind="newDebt.Status" class="form-select">
-                        <option value="Pending">Pending</option>
-                        <option value="Cleared">Cleared</option>
-                    </select>
-                </div>
-
-                <button type="submit" class="btn btn-primary w-100">Add Debt</button>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-plus-circle"></i> Add Debt
+                </button>
             </EditForm>
         </div>
     </div>
+
+    <!-- Pay Debt Form -->
+    @if (IsPayFormVisible)
+    {
+        <div class="card shadow-sm mt-4">
+            <div class="card-body">
+                <h2 class="card-title text-center text-primary"><i class="bi bi-cash-stack"></i> Pay Debt</h2>
+                <EditForm Model="payDebt" OnValidSubmit="HandlePayDebtSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="mb-3">
+                        <label for="payAmount" class="form-label">Amount</label>
+                        <InputNumber id="payAmount" @bind-Value="payDebt.Amount" class="form-control" placeholder="e.g., 2000" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="paySource" class="form-label">Source</label>
+                        <InputText id="paySource" @bind-Value="payDebt.Source" class="form-control" placeholder="e.g., Bank Loan" />
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-check-circle"></i> Submit Payment
+                    </button>
+                    <button type="button" class="btn btn-secondary w-100 mt-2" @onclick="ClosePayForm">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
     private AppData Data = new AppData();
-    private Debt newDebt = new Debt { Status = "Pending" }; // Set default status to "Pending"
-    private Debt editingDebt = new Debt();
-    private bool IsEditing = false;
+    private List<Debt> UserDebts = new();
+    private Debt newDebt = new Debt { Status = "Pending" }; // Default status
+    private Debt payDebt = new Debt(); // For Pay Form
+    private bool IsNotificationVisible = false; // Notification visibility flag
+    private string NotificationMessage = ""; // Message for the notification
+    private bool IsPayFormVisible = false;
+    private string ErrorMessage = ""; // Error message for notifications
+    private bool IsErrorMessageVisible = false; // Error notification visibility flag
 
     private decimal TotalDebt = 0;
-    private int TotalDebts;
-    private decimal PendingDebt;
-    private decimal ClearedDebt;
+    private int TotalDebts = 0;
+    private decimal PendingDebt = 0;
+    private decimal ClearedDebt = 0;
     private string LastPaymentDate = "N/A";
+    private string SelectedCurrency = "USD"; // Default currency
+    private decimal NetBalance => UserService.NetBalance;
 
     protected override void OnInitialized()
     {
+        var currentUser = UserService.GetCurrentUser();
+        if (currentUser == null)
+        {
+            NavigationManager.NavigateTo("/"); // Redirect if no user logged in
+            return;
+        }
+
+        SelectedCurrency = currentUser.PreferredCurrency ?? "USD";
+        UserService.LoadNetBalance(); // Load the saved NetBalance
+
         Data = UserService.LoadUsers();
+        UserDebts = UserService.GetUserDebts(Data);
+
         CalculateDebtSummary();
+        UserService.OnNetBalanceChanged += HandleNetBalanceChanged;
+    }
+
+
+    private void ShowErrorMessage(string message)
+    {
+        ErrorMessage = message;
+        IsErrorMessageVisible = true;
+
+        // Hide the error message after 3 seconds
+        Task.Delay(3000).ContinueWith(_ =>
+        {
+            IsErrorMessageVisible = false;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+    private void ShowNotification(string message)
+    {
+        NotificationMessage = message;
+        IsNotificationVisible = true;
+
+        // Hide the notification after 3 seconds
+        Task.Delay(3000).ContinueWith(_ =>
+        {
+            IsNotificationVisible = false;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private string FormatWithCurrency(decimal amount)
+    {
+        return UserService.FormatWithCurrency(amount, SelectedCurrency);
+    }
+
+    private void HandleNetBalanceChanged(decimal updatedNetBalance)
+    {
+        StateHasChanged(); // Refresh UI
     }
 
     private void CalculateDebtSummary()
     {
-        TotalDebt = Data.Debts.Sum(d => d.Amount);
-        TotalDebts = Data.Debts.Count;
-        PendingDebt = Data.Debts.Where(d => d.Status == "Pending").Sum(d => d.Amount);
-        ClearedDebt = Data.Debts.Where(d => d.Status == "Cleared").Sum(d => d.Amount);
-        LastPaymentDate = Data.Debts.Where(d => d.Status == "Cleared")
-                                    .OrderByDescending(d => d.DueDate)
-                                    .FirstOrDefault()?.DueDate.ToString("MM/dd/yyyy") ?? "N/A";
+        TotalDebt = UserDebts.Sum(d => d.Amount);
+        TotalDebts = UserDebts.Count;
+        PendingDebt = UserDebts.Where(d => d.Status == "Pending").Sum(d => d.Amount);
+        ClearedDebt = UserDebts.Where(d => d.Status == "Cleared").Sum(d => d.Amount);
+        LastPaymentDate = UserDebts.Where(d => d.Status == "Cleared")
+                                   .OrderByDescending(d => d.DueDate)
+                                   .FirstOrDefault()?.DueDate.ToString("MM/dd/yyyy") ?? "N/A";
+
+        UserService.UpdateDashboardRemainingDebt(PendingDebt);
     }
 
     private void HandleDebtSubmit()
     {
-        newDebt.Id = Data.Debts.Count + 1;
-        Data.Debts.Add(newDebt);
-        UserService.SaveUsers(Data);
+        var currentUser = UserService.GetCurrentUser();
+        if (currentUser == null) return;
 
-        // Recalculate summary
+        newDebt.UserId = currentUser.Id;
+
+        // Add the debt
+        UserService.AddDebt(newDebt);
+        UserService.RecalculateNetBalance();
+
+        UserDebts = UserService.GetUserDebts(Data);
         CalculateDebtSummary();
-
-        // Reset form with default status "Pending"
         newDebt = new Debt { Status = "Pending" };
+
+        ShowNotification("Debt added successfully.");
+        StateHasChanged();
+    }
+
+    private void HandlePayDebtSubmit()
+    {
+        var debtToPay = UserDebts.FirstOrDefault(d => d.Id == payDebt.Id);
+        if (debtToPay != null)
+        {
+            debtToPay.Status = "Cleared";
+            Data.Debts.FirstOrDefault(d => d.Id == payDebt.Id).Status = "Cleared";
+
+            UserService.ClearDebt(payDebt.Amount);
+            UserService.RecalculateNetBalance();
+
+            UserService.SaveUsers(Data);
+
+            CalculateDebtSummary();
+
+            ShowNotification("Debt paid successfully.");
+            ClosePayForm();
+        }
+    }
+
+    private void OpenPayForm(int debtId)
+    {
+        var debt = UserDebts.FirstOrDefault(d => d.Id == debtId);
+        if (debt != null && debt.Status == "Pending")
+        {
+            payDebt = new Debt
+                {
+                    Id = debt.Id,
+                    Source = debt.Source,
+                    Amount = debt.Amount
+                };
+            IsPayFormVisible = true;
+        }
+    }
+
+    private void ClosePayForm()
+    {
+        IsPayFormVisible = false;
+        payDebt = new Debt();
     }
 
     private void DeleteDebt(int debtId)
     {
-        var debtToRemove = Data.Debts.FirstOrDefault(d => d.Id == debtId);
+        var debtToRemove = UserDebts.FirstOrDefault(d => d.Id == debtId);
         if (debtToRemove != null)
         {
+            UserDebts.Remove(debtToRemove);
             Data.Debts.Remove(debtToRemove);
             UserService.SaveUsers(Data);
 
-            // Recalculate summary
             CalculateDebtSummary();
+            UserService.RecalculateNetBalance();
+
+            ShowNotification("Debt deleted successfully.");
         }
     }
 
-    private void EditDebt(int debtId)
+
+    private void AttemptDeleteDebt(int debtId)
     {
-        editingDebt = Data.Debts.FirstOrDefault(d => d.Id == debtId);
-        if (editingDebt != null)
+        var debtToRemove = UserDebts.FirstOrDefault(d => d.Id == debtId);
+
+        // If debt is not cleared, show an error message
+        if (debtToRemove != null && debtToRemove.Status == "Pending")
         {
-            IsEditing = true;
+            ShowErrorMessage("Clear the debt before deleting.");
+            return;
         }
-    }
 
-    private void HandleEditSubmit()
-    {
-        var existingDebt = Data.Debts.FirstOrDefault(d => d.Id == editingDebt.Id);
-        if (existingDebt != null)
-        {
-            existingDebt.Source = editingDebt.Source;
-            existingDebt.Amount = editingDebt.Amount;
-            existingDebt.DueDate = editingDebt.DueDate;
-            existingDebt.Status = editingDebt.Status;
-
-            UserService.SaveUsers(Data);
-
-            // Recalculate summary
-            CalculateDebtSummary();
-
-            // Reset editing state
-            editingDebt = new Debt();
-            IsEditing = false;
-        }
+        DeleteDebt(debtId); // Proceed with deletion if cleared
     }
 }

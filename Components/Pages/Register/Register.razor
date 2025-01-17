@@ -47,10 +47,11 @@
                 <label for="preferredCurrency" class="fw-bold">Preferred Currency</label>
                 <select id="preferredCurrency" @bind="PreferredCurrency" class="form-select" style="border-radius: 10px;">
                     <option value="" disabled>Select Currency</option>
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="GBP">GBP</option>
-                    <option value="NPR">NPR</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="INR">INR (₹)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="JPY">JPY (¥)</option>
                 </select>
             </div>
 
@@ -60,9 +61,8 @@
 
         <!-- Login Link -->
         <p class="text-center mt-3">
-            Already have an account? 
+            Already have an account?
             <a class="text-decoration-none" @onclick="NavigateToLogin" style="color: #B200ED; cursor: pointer;">Login</a>
         </p>
     </div>
 </div>
-
